@@ -6,6 +6,9 @@ on:
       - "mapeak"
     tags:
       - "deploy-*"
+  pull_request:
+    branches:
+      - "mapeak"
   workflow_dispatch: {}
 
 permissions:
@@ -99,6 +102,7 @@ jobs:
 
   publish:
     needs: [format_lint, unit_tests, build_images, smoke_test, upstream_checks]
+    if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
