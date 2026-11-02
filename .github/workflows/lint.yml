@@ -3,6 +3,7 @@ on: [pull_request]
 
 jobs:
   changelog:
+    continue-on-error: true # Keep for zstadler/valhalla
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
