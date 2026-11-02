@@ -67,6 +67,9 @@ message SearchFilter {
   oneof has_level {
     float level = 9; // level to filter edges by
   }
+  oneof has_exclude_steps {
+    bool exclude_steps = 10; // whether to exclude steps from loki results [default = true for bicycle]
+  }
 }
 
 message PathEdge {
@@ -81,6 +84,13 @@ message PathEdge {
   int32 outbound_reach = 11;
   int32 inbound_reach = 12;
   float heading = 13;
+
+  message BoundingCircle {
+    uint32 radius = 1; 
+    LatLng latlng = 2;
+  } 
+  
+  BoundingCircle bounding_circle = 14;
 }
 
 // Output information about how the location object below is correlated to the graph or to the route etc

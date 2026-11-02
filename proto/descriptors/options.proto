@@ -73,10 +73,13 @@ message AvoidEdge {
 }
 
 message CostFactorEdge {
+  reserved 5;
+  reserved "ignore_access_restrictions"; 
   uint64 id = 1;    // the edge's graph id
   double factor = 2; // the factor applied to the (partial) edge cost
   double start = 3;  // the start fraction along the edge
   double end = 4;    // the end fraction along the edge
+  uint32 allow_types = 6;   // does the user want to allow this edge
 }
 
 /**
@@ -357,6 +360,13 @@ message Costing {
     oneof has_multimodal_start_end_max_distance {
       uint32 multimodal_start_end_max_distance = 96;
     }
+
+    oneof has_low_class_factor {
+      float low_class_factor = 97;
+    }
+    oneof has_steps_factor {
+      float steps_factor = 99;
+    }
   }
 
   oneof has_options {
@@ -374,9 +384,12 @@ message Costing {
 }
 
 message LinearFeatureCost {
+  reserved 4;
+  reserved "ignore_access_restrictions";                         // deprecated: superseded by the broader "allow"
   repeated Location locations = 1;                               // In here we just store the first and last location correlation
   repeated Location shape = 2;                                   // This is where the actual line geometry goes
   double cost_factor = 3;
+  uint32 allow_types = 5;                                        // whether edges along this shape may be used unconditionally
 }
 
 message Options {
@@ -430,6 +443,7 @@ message Options {
     expansion_type = 6;
     flow_sources = 7;
     travel_mode = 8;
+    expansion_index = 9;
   }
 
   enum ReverseTimeTracking {
@@ -447,7 +461,7 @@ message Options {
     string id = 5;                                                 // id for the request
   }
   oneof has_jsonp {
-    string jsonp = 6;                                              // javascript callback for the request
+    string jsonp = 6 [deprecated = true];                         // javascript callback for the request
   }
   oneof has_encoded_polyline {
     string encoded_polyline = 7;                                   // polyline 6 encoded shape used in /height /trace_*
