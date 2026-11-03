@@ -124,6 +124,8 @@ jobs:
           make -C build package
       
       - name: Setup tmate session
+        timeout-minutes: 2 # Keep for zstadler/valhalla
+        continue-on-error: true # Keep for zstadler/valhalla
         uses: mxschmitt/action-tmate@v3
         if: ${{ env.SETUP_TMATE == 'true' || failure() }}
         with:
@@ -208,6 +210,8 @@ jobs:
           verbose: true
       
       - name: Setup tmate session
+        timeout-minutes: 2 # Keep for zstadler/valhalla
+        continue-on-error: true # Keep for zstadler/valhalla
         uses: mxschmitt/action-tmate@v3
         if: ${{ env.SETUP_TMATE == 'true' || failure() }}
         with:
@@ -284,6 +288,8 @@ jobs:
         run: sudo make -C build install
       
       - name: Setup tmate session
+        timeout-minutes: 2 # Keep for zstadler/valhalla
+        continue-on-error: true # Keep for zstadler/valhalla
         uses: mxschmitt/action-tmate@v3
         if: ${{ env.SETUP_TMATE == 'true' || failure() }}
         with:
