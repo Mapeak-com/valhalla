@@ -22,9 +22,8 @@ highway = {
 ["undefined"] =         {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "false", ["bike_forward"] = "false"},
 ["unknown"] =           {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "false", ["bike_forward"] = "false"},
 ["living_street"] =     {["auto_forward"] = "true",  ["truck_forward"] = "true",  ["bus_forward"] = "true",  ["taxi_forward"] = "true",  ["moped_forward"] = "true",  ["motorcycle_forward"] = "true",  ["pedestrian_forward"] = "true",  ["bike_forward"] = "true"},
-["ladder"] =          {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "true", ["bike_forward"] = "false"},
-["footway"] =           {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "true",  ["bike_forward"] = "false"},
-["pedestrian"] =        {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "true",  ["bike_forward"] = "false"},
+["footway"] =           {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "true",  ["bike_forward"] = "true"},
+["pedestrian"] =        {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "true",  ["bike_forward"] = "true"},
 ["steps"] =             {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "true",  ["bike_forward"] = "true"},
 ["bridleway"] =         {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "false", ["bike_forward"] = "false"},
 ["cycleway"] =          {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "false", ["bike_forward"] = "true"},
@@ -34,6 +33,7 @@ highway = {
 ["corridor"] =          {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "true",  ["bike_forward"] = "false"},
 ["elevator"] =          {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "true",  ["bike_forward"] = "false"},
 ["platform"] =          {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "true",  ["bike_forward"] = "false"},
+["ladder"] =            {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "true",  ["bike_forward"] = "false"},
 ["via_ferrata"] =       {["auto_forward"] = "false", ["truck_forward"] = "false", ["bus_forward"] = "false", ["taxi_forward"] = "false", ["moped_forward"] = "false", ["motorcycle_forward"] = "false", ["pedestrian_forward"] = "true",  ["bike_forward"] = "false"}
 }
 
@@ -779,8 +779,8 @@ function normalize_speed(speed)
       num = round(num * 1.609344)
     end
 
-    --toss unusably low speeds
-    if num < 10 then
+    --if num > 150kph or num < 10kph....toss
+    if num > 150 or num < 10 then
       return nil
     end
   end
@@ -924,13 +924,9 @@ function filter_tags_generic(kv)
     return 1
   end
 
-  --toss actual areas, but keep pedestrian areas 
+  --toss actual areas
   if kv["area"] == "yes" then
-    if kv["highway"] == "pedestrian" then
-      kv["pedestrian_area"] = "true"
-    else 
     return 1
-    end
   end
 
   --figure out what basic type of road it is
@@ -965,7 +961,7 @@ function filter_tags_generic(kv)
     end
 
     -- expects access=private not to be combined with other values
-    if kv["impassable"] == "yes" or access == "false" or (kv["access"] == "private" and kv["emergency"] == "yes") or (kv["service"] == "emergency_access") then
+    if kv["impassable"] == "yes" or access == "false" or (kv["access"] == "private" and (kv["emergency"] == "yes" or kv["service"] == "emergency_access")) then
 
       kv["auto_forward"] = "false"
       kv["truck_forward"] = "false"
@@ -1399,18 +1395,16 @@ function filter_tags_generic(kv)
   end
 
   --let all the :forward overrides through
-  local access_forward = any_in(motor_vehicle, kv["motor_vehicle:forward"] or kv["vehicle:forward"])
-  kv["auto_forward"] = any_in(motor_vehicle, kv["motorcar:forward"]) or access_forward or kv["auto_forward"]
-  kv["truck_forward"] = any_in(truck, kv["hgv:forward"]) or access_forward or kv["truck_forward"]
-  kv["bus_forward"] = any_in(bus, kv["bus:forward"]) or any_in(psv, kv["psv:forward"]) or
-                      access_forward or kv["bus_forward"]
-  kv["taxi_forward"] = any_in(taxi, kv["taxi:forward"]) or any_in(psv, kv["psv:forward"]) or
-                       access_forward or kv["taxi_forward"]
-  kv["moped_forward"] = any_in(moped, kv["moped:forward"]) or
-                        any_in(moped, kv["mofa:forward"]) or
-                        access_forward or kv["moped_forward"]
-  kv["motorcycle_forward"] = any_in(motor_vehicle, kv["motorcycle:forward"]) or access_forward or
-                             kv["motorcycle_forward"]
+  local mv_forward = kv["motor_vehicle:forward"] or kv["vehicle:forward"]
+  if mv_forward ~= nil then
+    local access_forward = any_in(motor_vehicle, mv_forward)
+    kv["auto_forward"] = access_forward
+    kv["truck_forward"] = access_forward
+    kv["bus_forward"] = access_forward
+    kv["taxi_forward"] = access_forward
+    kv["moped_forward"] = access_forward
+    kv["motorcycle_forward"] = access_forward
+  end
   if kv["foot:forward"] ~= nil then
     kv["pedestrian_forward"] = any_in(foot, kv["foot:forward"])
   end
@@ -1420,18 +1414,16 @@ function filter_tags_generic(kv)
   end
 
   --let all the :backward overrides through, some of this is redundant but the code is a mess...
-  local access_backward = any_in(motor_vehicle, kv["motor_vehicle:backward"] or kv["vehicle:backward"])
-  kv["auto_backward"] = any_in(motor_vehicle, kv["motorcar:backward"]) or access_backward or kv["auto_backward"]
-  kv["truck_backward"] = any_in(truck, kv["hgv:backward"]) or access_backward or kv["truck_backward"]
-  kv["bus_backward"] = any_in(bus, kv["bus:backward"]) or any_in(psv, kv["psv:backward"]) or
-                       access_backward or kv["bus_backward"]
-  kv["taxi_backward"] = any_in(taxi, kv["taxi:backward"]) or any_in(psv, kv["psv:backward"]) or
-                        access_backward or kv["taxi_backward"]
-  kv["moped_backward"] = any_in(moped, kv["moped:backward"]) or
-                         any_in(moped, kv["mofa:backward"]) or
-                         access_backward or kv["moped_backward"]
-  kv["motorcycle_backward"] = any_in(motor_vehicle, kv["motorcycle:backward"]) or access_backward or
-                              kv["motorcycle_backward"]
+  local mv_backward = kv["motor_vehicle:backward"] or kv["vehicle:backward"]
+  if mv_backward ~= nil then
+    local access_backward = any_in(motor_vehicle, mv_backward)
+    kv["auto_backward"] = access_backward
+    kv["truck_backward"] = access_backward
+    kv["bus_backward"] = access_backward
+    kv["taxi_backward"] = access_backward
+    kv["moped_backward"] = access_backward
+    kv["motorcycle_backward"] = access_backward
+  end
   if kv["foot:backward"] ~= nil then
     kv["pedestrian_backward"] = any_in(foot, kv["foot:backward"])
   end
@@ -1603,8 +1595,6 @@ function filter_tags_generic(kv)
         use = 33 --elevator
      elseif (kv["highway"] == "steps" and kv["conveying"] ~= nil) then
         use = 34 --escalator
-     elseif kv["highway"] == "ladder" then
-        use = 36 -- ladder
      elseif kv["highway"] == "steps" then
         use = 26 --steps/stairs
      elseif kv["highway"] == "path" then
@@ -1630,11 +1620,6 @@ function filter_tags_generic(kv)
     use = 40 --other
   elseif use == nil then
     use = 0 --general road, no special use
-  end
-
-  -- special use for cycle streets
-  if bicycle[kv["cyclestreet"]] == "true" or bicycle[kv["bicycle_road"]] == "true" then
-    use = 12
   end
 
   -- do not override 'construction' use
@@ -1776,8 +1761,6 @@ function filter_tags_generic(kv)
   if kv["maxspeed"] == "none" then
     --- special case unlimited speed limit (german autobahn)
     kv["max_speed"] = "unlimited"
-  elseif kv["maxspeed"] == "walk" then
-    kv["max_speed"] = 5
   else
     kv["max_speed"] = normalize_speed(kv["maxspeed"])
   end
@@ -1793,16 +1776,18 @@ function filter_tags_generic(kv)
 
   --lower the default speed for tracks
   if kv["highway"] == "track" then
-     kv["default_speed"] = 5
+     kv["default_speed"] = 25
      if kv["tracktype"] then
        if kv["tracktype"] == "grade1" then
-         kv["default_speed"] = 20
+         kv["default_speed"] = 40
        elseif kv["tracktype"] == "grade2" then
-         kv["default_speed"] = 15
+         kv["default_speed"] = 32
        elseif kv["tracktype"] == "grade3" then
-         kv["default_speed"] = 12
+         kv["default_speed"] = 25
        elseif kv["tracktype"] == "grade4" then
          kv["default_speed"] = 10
+       elseif kv["tracktype"] == "grade5" then
+         kv["default_speed"] = 6
        end
      end
   end
@@ -2059,6 +2044,12 @@ function nodes_proc (kv, nokeys)
   --normalize a few tags that we care about
   local initial_access = any_in(access, kv["access"])
   local access = initial_access or "true"
+
+  -- Only the literal "private", not the destination/customers/delivery/permit/
+  -- residents values that also live in the `private` table
+  if kv["access"] == "private" then
+    access = "false"
+  end
 
   -- expect access=private not to be combined with other values
   if (kv["impassable"] == "yes" or (kv["access"] == "private" and (kv["emergency"] == "yes" or kv["service"] == "emergency_access"))) then
@@ -2477,10 +2468,6 @@ function rels_proc (kv, nokeys)
        kv["restriction"] = nil
        return 0, kv
      end
-  end
-
-  if (kv["type"] == "multipolygon" and kv["highway"] == "pedestrian" and kv["area"] == "yes") then
-    return 0, kv
   end
 
   return 1, kv
