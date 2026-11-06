@@ -1,0 +1,45 @@
+name: Sync upstream master
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch: {}
+
+permissions:
+  contents: read
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          ref: mapeak
+          fetch-depth: 0
+          token: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
+
+      - name: Open a PR merging upstream master into mapeak
+        shell: bash
+        run: |
+          set -e
+          open_prs=$(gh pr list --base mapeak --state open --json headRefName \
+            --jq '[.[] | select(.headRefName | startswith("upstream-sync-"))] | length')
+          if [[ $open_prs -gt 0 ]]; then
+            echo "An upstream sync PR is already open"
+            exit 0
+          fi
+          git fetch https://github.com/valhalla/valhalla.git master
+          upstream_sha=$(git rev-parse FETCH_HEAD)
+          if git merge-base --is-ancestor "$upstream_sha" HEAD; then
+            echo "mapeak already contains valhalla/valhalla master ${upstream_sha}"
+            exit 0
+          fi
+          short_sha=${upstream_sha:0:10}
+          branch="upstream-sync-${short_sha}"
+          count=$(git rev-list --count "HEAD..${upstream_sha}")
+          git push origin "${upstream_sha}:refs/heads/${branch}"
+          gh pr create --base mapeak --head "$branch" \
+            --title "Merge valhalla/valhalla master ${short_sha}" \
+            --body "Merges ${count} commits from [valhalla/valhalla master](https://github.com/valhalla/valhalla/commits/${upstream_sha}). Created by workflow run [#${{ github.run_id }}](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})."
+        env:
+          GH_TOKEN: ${{ secrets.UPSTREAM_SYNC_TOKEN }}
